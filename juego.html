@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Gameboy Quiz con Objetos</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body,html{height:100%}
+    body{display:flex;justify-content:center;align-items:center;background:#2d5a27;font-family:'Courier New',monospace}
+    .gameboy{width:95vw;max-width:350px;aspect-ratio:3/5.5;background:linear-gradient(145deg,#8b956d,#9ca887);border-radius:20px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:inset 0 2px 4px rgba(255,255,255,0.2),0 8px 20px rgba(0,0,0,0.3);position:relative;overflow:hidden}
+    .screen{flex:1;background:#9bbc0f;border:6px solid #6b7355;border-radius:6px;position:relative;padding:8px;color:#0f380f;overflow:hidden;box-shadow:inset 0 0 10px rgba(0,0,0,0.2);display:flex;flex-direction:column;justify-content:center;align-items:center}
+    .level-info{position:absolute;top:6px;left:6px;font-size:12px;opacity:.8}
+    .timer{position:absolute;top:6px;right:6px;font-size:11px;color:#f44336;font-weight:bold;display:flex;align-items:center;gap:2px}
+    .timer::before{content:'⏳';font-size:12px}
+    .lives{position:absolute;top:22px;right:6px;font-size:12px;color:#4caf50}
+    .boss-bar-container{position:absolute;bottom:6px;left:6px;right:6px;height:20px;background:#333;border:2px solid #0f380f;border-radius:4px}
+    .boss-bar{height:100%;background:linear-gradient(90deg,#ff4444,#cc0000);transition:width 0.5s;border-radius:2px}
+    .boss-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:12px;color:#0f380f;font-weight:bold}
+    #intro,#result{margin:4px 0;text-align:center;font-size:12px}
+    .placeholder-level{width:80%;max-width:200px;height:100px;background:#0f380f;margin:16px 0;border:2px solid #4a7c59;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#9bbc0f;gap:8px}
+    .placeholder-level.blink{animation:blink 1s infinite}
+    @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0.3}}
+    .quiz{display:none;flex-direction:column;gap:6px;align-items:center;overflow:auto;padding:4px;width:100%}
+    .quiz h4{font-size:11px;margin-bottom:4px;text-align:center;line-height:1.2}
+    .quiz button{background:rgba(15,56,15,0.7);border:1px solid #0f380f;border-radius:4px;padding:6px 4px;cursor:pointer;font-size:9px;color:#fff;transition:background .2s;text-align:center;width:80%;line-height:1.1}
+    .quiz button:hover{background:rgba(15,56,15,1)}
+    .quiz button:disabled{background:rgba(15,56,15,0.3);cursor:not-allowed}
+    #result p{margin:16px 0;font-size:18px;font-weight:bold;text-align:center}
+    .win{color:#000}
+    .lose{color:#e74c3c}
+    .controls{display:flex;justify-content:space-between;align-items:center;padding:8px 0;position:relative}
+    .d-pad{display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);gap:4px;width:100px;height:100px}
+    .d-pad button{background:linear-gradient(145deg,#6b7355,#7a8463);border:none;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:12px;color:#333;cursor:pointer;transition:transform .1s}
+    .d-pad .up{grid-area:1/2}.left{grid-area:2/1}.center{grid-area:2/2;border-radius:50%}.right{grid-area:2/3}.down{grid-area:3/2}
+    button.action{border:none;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.3);color:#fff;transition:transform .1s}
+    .btn-a{background:linear-gradient(145deg,#8b4513,#a0522d);width:45px;height:45px;border-radius:50%;position:absolute;right:0;top:0}
+    .btn-b{background:linear-gradient(145deg,#4a4a4a,#5a5a5a);width:45px;height:45px;border-radius:50%;position:absolute;right:60px;top:20px}
+    .btn-audio{background:linear-gradient(145deg,#ff6b6b,#ff5252);width:50px;height:30px;border-radius:8px;font-size:16px;position:absolute;top:50%;display:flex;align-items:center;justify-content:center;transition: transform 0.1s ease;box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);}
+    .actions{position:relative;width:120px;height:120px}
+    .middle-section{position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+    .beard-icon{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:18px;opacity:0.3;transition:opacity 0.3s;display:none}
+    .beard-icon.active{opacity:1}
+    .beard-icon.visible{display:block}
+    .d-pad button:active,button.action:active{transform:translateY(1px)}
+    .speaker-grille{position:absolute;bottom:15px;right:15px;width:50px;height:35px;background:linear-gradient(145deg,#6b7355,#7a8463);border-radius:5px;display:flex;flex-direction:column;justify-content:space-around;align-items:center;padding:4px}
+    .speaker-grille::before,.speaker-grille::after{content:'';width:35px;height:2px;background:#333;border-radius:1px}
+    .speaker-grille.animate{animation:speaker-pulse 0.3s ease-in-out}
+    .musical-note{position:absolute;color:#333;font-size:14px;opacity:0;pointer-events:none}
+    .musical-note.animate{animation:note-float 1s ease-out forwards}
+    .item-menu{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(15,56,15,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;overflow-y:auto;padding:20px}
+    .item-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:200px}
+    .item-btn{background:rgba(155,188,15,0.8);border:2px solid #0f380f;border-radius:8px;padding:8px;color:#0f380f;font-size:10px;text-align:center;cursor:pointer;min-height:60px;display:flex;flex-direction:column;align-items:center;gap:4px}
+    .item-btn.selected{border-color:#fff;background:rgba(155,188,15,1)}
+    .item-btn.used{opacity:0.3;background:rgba(100,100,100,0.3);pointer-events:none}
+    .item-btn .icon{font-size:16px}
+    .active-item{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:16px;background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:4px;display:none}
+    .quiz button.disabled{opacity:0.4;background:rgba(139,69,19,0.3);pointer-events:none}
+    @keyframes speaker-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1);background:linear-gradient(145deg,#7a8463,#8b956d)}}
+    @keyframes note-float{0%{opacity:1;transform:translateY(0) scale(0.5)}50%{opacity:0.8;transform:translateY(-20px) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(0.5)}}
+    @media(max-width:350px){.d-pad{width:70px;height:70px}.btn-a,.btn-b{width:40px;height:40px}.speaker-grille{width:40px;height:28px}}
+    
+  </style>
+</head>
+<body>
+  <div class="gameboy">
+    <div class="screen" id="screen">
+      <div class="level-info" id="info">FINAL BOSS</div>
+      <div class="beard-icon" id="beardIcon">🧔🏻</div>
+      <div class="timer" id="timer" style="display:none;"></div>
+      <div class="lives" id="lives" style="display:none;">❤️❤️❤️❤️</div>
+      <div class="boss-label" style="display:none;">La Innombrable</div>
+      <div class="boss-bar-container" style="display:none;">
+        <div class="boss-bar" id="bossBar"></div>
+      </div>
+      <div id="intro"></div>
+      <div class="placeholder-level" id="placeholder">
+        <div>🎵 Pulsa ♪ para escuchar</div>
+        <div class="blink">Pulsa A para empezar</div>
+      </div>
+      <div id="quiz" class="quiz"></div>
+      <div id="result"></div>
+    </div>
+    <div class="controls">
+      <div class="d-pad">
+        <button class="up">▲</button><button class="left">◄</button><button class="center" id="centerBtn">●</button><button class="right">►</button><button class="down">▼</button>
+      </div>
+      <div class="middle-section">
+        <button class="action btn-audio" id="btnAudio">♪</button>
+      </div>
+      <div class="actions">
+        <button class="action btn-b" id="btnB">B</button>
+        <button class="action btn-a" id="btnA">A</button>
+      </div>
+      <div class="speaker-grille" id="speakerGrille"></div>
+    </div>
+  </div>
+  <script>
+    // Sistema de objetos
+    const items = [
+      {id: 'sable', name: 'Sable de El Sable', icon: '⚔️', owned: false, used: false},
+      {id: 'bracito', name: 'Bracito esquelético', icon: '🦴', owned: true, used: false},
+      {id: 'espada', name: 'Espada condón', icon: '🗡️', owned: false, used: false},
+      {id: 'escudo', name: 'Escudo capitán américa', icon: '🛡️', owned: true, used: false},
+      {id: 'anticonceptivo', name: 'Escudo anticonceptivo', icon: '🔰', owned: true, used: false},
+      {id: 'donuts', name: 'Donuts', icon: '🍩', owned: false, used: false},
+      {id: 'migas', name: 'Migas del abuelo', icon: '🍞', owned: true, used: false},
+      {id: 'cola', name: 'Ñoca-cola', icon: '🥤', owned: false, used: false},
+      {id: 'pastilla', name: 'Pastilla abortiva', icon: '💊', owned: false, used: false},
+      {id: 'champu', name: 'Champú anti caspa', icon: '🧴', owned: false, used: false},
+      {id: 'bang', name: 'Carta de bang', icon: '🃏', owned: false, used: false},
+      {id: 'piedra', name: 'Una piedra', icon: '🪨', owned: true, used: false}
+    ];
+
+    let itemMenuOpen = false;
+    let selectedItemIndex = 0;
+    let activeItem = null;
+    let canRetryQuestion = false;
+    let maxLives = 4;
+    let itemUsedThisQuestion = false;
+    let champuUsed = false;
+
+    // Preguntas y respuestas
+    const questions = [
+      {q: '¿Qué término psicológico describe el hábito de comprar juegos y nunca jugarlos?', opts: ['Biblioteca de la vergüenza / Efecto coleccionista','FOMO (Fear Of Missing Out)','Síndrome del impostor','Ludopatía digital'], c: 0, a: 'audio/q1.wav'},
+      {q:'¿Qué juego de Spider-Man (Insomniac) es el más vendido de la franquicia?', opts:['Spider-Man: Shattered Dimensions','Marvel\'s Spider-Man (2018)','The Amazing Spider-Man 2','Spider-Man: Edge of Time'], c:1, a:'audio/q2.wav'},
+      {q:'En Assassin\'s Creed, ¿qué juego introdujo el sistema económico con ingresos pasivos?', opts:['Assassin\'s Creed (2007)','Assassin\'s Creed: Brotherhood','Assassin\'s Creed II','Assassin\'s Creed: Revelations'], c:2, a:'audio/q3.wav'},
+      {q:'Según datos de Steam, ¿qué porcentaje de las ventas totales representan juegos <10€?', opts:['30-40%','70-80%','50-60%','90-95%'], c:1, a:'audio/q4.wav'},
+      {q:'¿Qué consola enfrentó problemas en Japón por el tamaño de su hardware?', opts:['PlayStation 2','Xbox original','Nintendo Switch','Sega Dreamcast'], c:1, a:'audio/q5.wav'},
+      {q:'¿Cuál fue el PRIMER videojuego de la historia?', opts:['Pong','Spacewar!','Tennis for Two','OXO'], c:3, a:'audio/q6.wav'},
+      {q:'¿Qué tipo de dificultad en videojuegos se enfoca en reflejos y coordinación?', opts:['Dificultad estratégica','Dificultad ejecutiva','Dificultad arcana','Dificultad de grind'], c:1, a:'audio/q7.wav'},
+      {q:'¿Qué juego usó "Director AI" para ajustar enemigos según habilidad del jugador?', opts:['Resident Evil 4','Elden Ring','Left 4 Dead','Crash Bandicoot'], c:2, a:'audio/q8.wav'},
+      {q:'¿Quién diseñó la saga Gran Turismo y es llamado "padre de PlayStation"?', opts:['Shigeru Miyamoto','Hideo Kojima','Kazunori Yamauchi','Yuji Naka'], c:2, a:'audio/q9.wav'},
+      {q:'En Assassin\'s Creed, ¿qué juego se lanzó junto a la película de 2016?', opts:['Assassin\'s Creed: Unity','Assassin\'s Creed: Syndicate','Assassin\'s Creed: Origins','Assassin\'s Creed: Odyssey'], c:1, a:'audio/q10.wav'},
+      {q:'En Marvel\'s Spider-Man (PS4), ¿qué personaje interpreta el papel de mentor/tutor de Peter Parker?', opts:['Norman Osborn','Otto Octavius','Wilson Fisk','Martin Li'], c:1, a:'audio/q11.wav'},
+      {q:'¿Qué término describe la ansiedad por perderse ofertas en plataformas como Steam?', opts:['Síndrome del impostor','Ludopatía digital','FOMO (Fear Of Missing Out)','Efecto rebote'], c:2, a:'audio/q12.wav'},
+      {q:'¿Qué juego de Assassin\'s Creed presenta como protagonista a Kassandra?', opts:['Origins','Valhalla','Odyssey','Syndicate'], c:2, a:'audio/q13.wav'},
+      {q:'Según SteamDB, ¿qué porcentaje de usuarios tiene más de 50 juegos sin jugar en su biblioteca?', opts:['15-20%','25-35%','40-50%','60-70%'], c:2, a:'audio/q14.wav'},
+      {q:'¿Qué juego de menos de 5€ en Steam tiene "Overwhelmingly Positive" con +500k reseñas?', opts:['Terraria','Stardew Valley','Vampire Survivors','Hollow Knight'], c:2, a:'audio/q15.wav'}
+    ];
+    
+    let currentQuestion = 0;
+    let lives = 4;
+    let correctAnswers = 0;
+    let timer = 60;
+    let timerInterval;
+    let gameStarted = false;
+    let gameEnded = false;
+    let currentAudio = null;
+    let noteInterval = null;
+    let beardActive = true; // Cambiado a true por defecto
+    
+    const intro = document.getElementById('intro');
+    const quizEl = document.getElementById('quiz');
+    const result = document.getElementById('result');
+    const info = document.getElementById('info');
+    const placeholder = document.getElementById('placeholder');
+    const timerEl = document.getElementById('timer');
+    const livesEl = document.getElementById('lives');
+    const bossBar = document.getElementById('bossBar');
+    const bossLabel = document.querySelector('.boss-label');
+    const bossBarContainer = document.querySelector('.boss-bar-container');
+    const speakerGrille = document.getElementById('speakerGrille');
+    const beardIcon = document.getElementById('beardIcon');
+    
+    function updateBossBar() {
+      const bossHealth = Math.max(0, 100 - (correctAnswers / 11) * 100);
+      bossBar.style.width = bossHealth + '%';
+    }
+    
+    function updateLives() {
+      livesEl.textContent = '❤️'.repeat(lives);
+    }
+    
+    function updateTimer() {
+      timerEl.textContent = timer + 's';
+      if (timer <= 10) {
+        timerEl.style.color = '#ff0000';
+      } else {
+        timerEl.style.color = '#f44336';
+      }
+    }
+    
+    function updateBeardIcon() {
+      if (currentQuestion >= 4 && currentQuestion <= 8 && !champuUsed) {
+        beardIcon.classList.add('visible');
+        if (beardActive) {
+          beardIcon.classList.add('active');
+        } else {
+          beardIcon.classList.remove('active');
+        }
+      } else {
+        beardIcon.classList.remove('visible');
+        beardActive = true;
+      }
+    }
+
+    function showNotification(message, color = '#0f380f') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 16px;
+        background: ${color === '#4caf50' ? '#0f380f' : (color === '#ff9800' || color === '#ff4444') ? 'rgba(139,0,0,0.9)' : 'rgba(155,188,15,0.9)'};
+        border: 3px solid ${color === '#4caf50' ? '#9bbc0f' : color};
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: bold;
+        color: ${color === '#4caf50' ? '#9bbc0f' : (color === '#ff9800' || color === '#ff4444') ? '#ffcccc' : color};
+        z-index: 1000;
+        animation: fadeInOut 3s ease-in-out forwards;
+        max-width: 80%;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      `;
+      notification.textContent = message;
+      
+      // Agregar animación CSS si no existe
+      if (!document.querySelector('#notificationStyle')) {
+        const style = document.createElement('style');
+        style.id = 'notificationStyle';
+        style.textContent = `
+          @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+            15% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+            20% { opacity: 1; transform: translateX(-50%) scale(1); }
+            80% { opacity: 1; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.getElementById('screen').appendChild(notification);
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
+    }
+
+    function showItemMenu() {
+      if (currentQuestion < 4 || itemUsedThisQuestion) return;
+      itemMenuOpen = true;
+      selectedItemIndex = 0;
+      
+      const menu = document.createElement('div');
+      menu.className = 'item-menu';
+      menu.id = 'itemMenu';
+      menu.style.display = 'flex';
+      
+      const grid = document.createElement('div');
+      grid.className = 'item-grid';
+      
+      let firstAvailableIndex = -1;
+      items.forEach((item, i) => {
+        const btn = document.createElement('div');
+        btn.className = `item-btn ${(item.used || !item.owned) ? 'used' : ''}`;
+        btn.innerHTML = `<div class="icon">${item.icon}</div><div>${item.name}</div>`;
+        if (!item.used && item.owned) {
+          btn.onclick = () => selectItem(i);
+          if (firstAvailableIndex === -1) firstAvailableIndex = i;
+        }
+        grid.appendChild(btn);
+      });
+      
+      // Seleccionar el primer objeto disponible
+      if (firstAvailableIndex !== -1) {
+        selectedItemIndex = firstAvailableIndex;
+        updateItemSelection();
+      }
+      
+      menu.appendChild(grid);
+      document.getElementById('screen').appendChild(menu);
+    }
+
+    // 4. Función nueva para actualizar selección de objetos
+    function updateItemSelection() {
+      document.querySelectorAll('.item-btn').forEach((btn, i) => {
+        const item = items[i];
+        if (item) {
+          // Remover todas las clases primero
+          btn.classList.remove('selected');
+          
+          // Solo marcar como seleccionado si es el índice actual
+          if (i === selectedItemIndex) {
+            btn.classList.add('selected');
+          }
+        }
+      });
+    }
+
+    function selectItem(index) {
+      if (items[index].used) return;
+      selectedItemIndex = index;
+      updateItemSelection();
+    }
+
+    function useItem() {
+      const item = items[selectedItemIndex];
+      if (!item || item.used || !item.owned || itemUsedThisQuestion) {
+        // Si el objeto no se puede usar, mostrar feedback visual/sonoro
+        if (item && (!item.owned || item.used)) {
+          // Opcional: añadir algún feedback visual aquí si quieres
+        }
+        return;
+      }
+      
+      activeItem = item;
+      item.used = true;
+      itemUsedThisQuestion = true;
+      closeItemMenu();
+      
+      const activeEl = document.createElement('div');
+      activeEl.className = 'active-item';
+      activeEl.style.display = 'block';
+      activeEl.textContent = item.icon;
+      document.getElementById('screen').appendChild(activeEl);
+      
+      applyItemEffect(item);
+    }
+
+    function applyItemEffect(item) {
+      switch(item.id) {
+        case 'sable':
+          const buttons = quizEl.querySelectorAll('button');
+          const correctIndex = questions[currentQuestion].c;
+          let keptIndices = [correctIndex];
+          let availableIndices = [];
+          
+          for(let i = 0; i < buttons.length; i++) {
+            if(i !== correctIndex) availableIndices.push(i);
+          }
+          
+          const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+          keptIndices.push(randomIndex);
+          
+          buttons.forEach((btn, i) => {
+            if(!keptIndices.includes(i)) {
+              btn.classList.add('disabled');
+              btn.style.opacity = '0.4';
+              btn.style.background = 'rgba(139,69,19,0.3)';
+              btn.style.pointerEvents = 'none';
+            }
+          });
+          break;
+          
+        case 'espada':
+          timer += 30;
+          updateTimer();
+          break;
+          
+        case 'champu':
+          champuUsed = true;
+          beardActive = false;
+          updateBeardIcon();
+          break;
+          
+        case 'migas':
+          if (lives < maxLives) {
+            lives++;
+            showNotification('¡Corazón restaurado!', '#4caf50');
+          } else {
+            maxLives++;
+            lives++;
+            showNotification('¡Corazón extra obtenido!', '#4caf50');
+          }
+          updateLives();
+          break;
+          
+        case 'piedra':
+          correctAnswers++;
+          updateBossBar();
+          showNotification('¡Daño directo a La Innombrable!', '#ff4444');
+          // Reiniciar el timer
+          const wasBeardActive = beardActive;
+          stopTimer();
+          beardActive = wasBeardActive;
+          startTimer();
+          break;
+          
+          case 'pastilla':
+            if (Math.random() < 0.4) { // Cambiar de 0.2 a 0.4
+              correctAnswers++;
+              updateBossBar();
+              showNotification('¡Pregunta abortada con éxito!', '#4caf50');
+              setTimeout(() => nextQuestion(), 1000);
+            } else {
+              showNotification('La pastilla no tuvo efecto...', '#ff4444');
+            }
+            break;
+          
+        case 'bang':
+          const allButtons = quizEl.querySelectorAll('button');
+          const correctBtn = questions[currentQuestion].c;
+          allButtons.forEach((btn, i) => {
+            if(i !== correctBtn) {
+              btn.style.display = 'none';
+            }
+          });
+          break;
+      }
+    }
+
+    function closeItemMenu() {
+      const menu = document.getElementById('itemMenu');
+      if (menu) menu.remove();
+      itemMenuOpen = false;
+    }
+    
+    function startTimer() {
+      // Determinar duración del timer
+      let timerDuration = 60;
+      if (currentQuestion >= 4 && currentQuestion <= 8 && beardActive && !champuUsed) {
+        timerDuration = 30; // Tiempo reducido a la mitad
+      }
+      
+      timer = timerDuration;
+      updateTimer();
+      timerInterval = setInterval(() => {
+        timer--;
+        updateTimer();
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          nextQuestion();
+        }
+      }, 1000);
+    }
+    
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+    
+    function startGame() {
+      if (gameStarted || gameEnded) return;
+      gameStarted = true;
+      currentQuestion = 0;
+      lives = 4;
+      correctAnswers = 0;
+      
+      placeholder.style.display = 'none';
+      intro.style.display = 'none';
+      
+      // Mostrar elementos del juego
+      timerEl.style.display = 'flex';
+      livesEl.style.display = 'block';
+      bossLabel.style.display = 'block';
+      bossBarContainer.style.display = 'block';
+      
+      updateLives();
+      updateBossBar();
+      showQuestion();
+    }
+    
+    function showQuestion() {
+      if (currentQuestion >= questions.length || lives <= 0 || correctAnswers >= 11) {
+        endGame();
+        return;
+      }
+      
+      // Reset para nueva pregunta
+      itemUsedThisQuestion = false;
+      
+      info.textContent = `NIVEL ${currentQuestion + 1}`;
+      updateBeardIcon();
+      
+      const question = questions[currentQuestion];
+      quizEl.style.display = 'flex';
+      quizEl.innerHTML = '';
+      
+      const h = document.createElement('h4');
+      h.textContent = question.q;
+      quizEl.appendChild(h);
+      
+      question.opts.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = opt;
+        btn.onclick = () => answerQuestion(i);
+        quizEl.appendChild(btn);
+      });
+      
+      startTimer();
+      play(question.a);
+    }
+    
+    function answerQuestion(selectedIndex) {
+      stopTimer();
+      
+      const question = questions[currentQuestion];
+      const buttons = quizEl.querySelectorAll('button');
+      
+      // Deshabilitar todos los botones
+      buttons.forEach(btn => btn.disabled = true);
+      
+      if (selectedIndex === question.c) {
+        correctAnswers++;
+        buttons[selectedIndex].style.background = '#4caf50';
+        
+        // Efectos de objetos al acertar
+        if (activeItem) {
+          switch(activeItem.id) {
+            case 'bracito':
+              if (Math.random() < 0.6) {
+                correctAnswers++;
+                showNotification('¡El bracito te da suerte extra!', '#4caf50');
+              } else {
+                showNotification('El bracito no tuvo efecto...', '#ff9800');
+              }
+              break;
+            case 'cola':
+              correctAnswers++;
+              showNotification('¡Ñoca-cola potencia tu acierto!', '#4caf50');
+              break;
+            case 'escudo':
+              if (Math.random() < 0.5) {
+                // El escudo funciona - daño bonus por acertar
+                correctAnswers++;
+                updateBossBar();
+                showNotification('¡El escudo del Capitán América hace daño extra!', '#4caf50');
+              } else {
+                // El escudo no funciona
+                showNotification('El escudo del Capitán América no se activó...', '#ff4444');
+              }
+              break;
+          }
+        }
+        
+        updateBossBar();
+        if (correctAnswers >= 11) {
+          setTimeout(() => endGame(), 1000);
+          return;
+        }
+      } else {
+        let damage = currentQuestion >= 10 ? 2 : 1;
+        let applyDamage = true;
+        let originalDamage = damage;
+        
+        // Efectos de objetos al fallar
+        if (activeItem) {
+          switch(activeItem.id) {
+            case 'anticonceptivo':
+              applyDamage = false;
+              showNotification('¡Escudo anticonceptivo te protege!', '#4caf50');
+              break;
+            case 'donuts':
+              canRetryQuestion = true;
+              applyDamage = false;
+              showNotification('¡Los donuts te dan otra oportunidad!', '#4caf50');
+              break;
+            case 'escudo':
+              showNotification('El escudo del Capitán América no se activó...', '#ff4444');
+             break;
+            case 'cola':
+              damage *= 2;
+              showNotification('¡Ñoca-cola duplica el daño recibido!', '#ff4444');
+              break;
+          }
+        }
+        
+        if (applyDamage) {
+          lives -= damage;
+          updateLives();
+        }
+        
+        buttons[selectedIndex].style.background = '#f44336';
+        
+        // Para donuts, no mostrar respuesta correcta
+        if (!canRetryQuestion) {
+          buttons[question.c].style.background = '#4caf50';
+        }
+        
+        if (lives <= 0) {
+          setTimeout(() => endGame(), 1000);
+          return;
+        }
+        
+        if (canRetryQuestion) {
+          canRetryQuestion = false;
+          setTimeout(() => {
+            buttons.forEach(btn => {
+              btn.disabled = false;
+              btn.style.background = 'rgba(15,56,15,0.7)';
+              btn.style.opacity = '1';
+            });
+            startTimer();
+          }, 1500);
+          return;
+        }
+      }
+
+      setTimeout(() => nextQuestion(), 1500);
+    }
+    
+    function nextQuestion() {
+      // Limpiar objeto activo
+      if (activeItem) {
+        document.querySelector('.active-item')?.remove();
+        activeItem = null;
+      }
+      
+      currentQuestion++;
+      showQuestion();
+    }
+    
+    function endGame() {
+      gameEnded = true;
+      stopTimer();
+      quizEl.style.display = 'none';
+      timerEl.textContent = '';
+      
+      // Limpiar objeto activo
+      if (activeItem) {
+        document.querySelector('.active-item')?.remove();
+        activeItem = null;
+      }
+      
+      let message = '';
+      let isWin = false;
+      
+      if (correctAnswers >= 11) {
+        message = '¡Victoria! Has superado a La Innombrable.';
+        info.textContent = 'PANTALLA FINAL';
+        isWin = true;
+        play('audio/final_success.wav');
+      } else if (lives <= 0) {
+        message = 'Sin vidas... No has logrado superar a La Innombrable.';
+        info.textContent = 'GAME OVER';
+        play('audio/final_fail.wav');
+      } else {
+        message = 'Se acabaron las preguntas... No has logrado superar a La Innombrable.';
+        info.textContent = 'GAME OVER';
+        play('audio/final_fail.wav');
+      }
+      
+      result.innerHTML = `<p class="${isWin ? 'win' : 'lose'}">${message}</p>`;
+    }
+    
+    function play(src) {
+      // Detener audio anterior si existe
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+      
+      // Detener animaciones anteriores
+      clearInterval(noteInterval);
+      speakerGrille.classList.remove('animate');
+      
+      if (src) {
+        currentAudio = new Audio(src);
+        
+        // Manejar eventos del audio
+        currentAudio.addEventListener('loadedmetadata', () => {
+          const duration = currentAudio.duration;
+          startAudioAnimation(duration);
+        });
+        
+        currentAudio.addEventListener('ended', () => {
+          stopAudioAnimation();
+        });
+        
+        currentAudio.addEventListener('error', () => {
+          // En caso de error, no mostrar animación
+          stopAudioAnimation();
+        }); 
+
+        currentAudio.play().catch(() => {
+          // Si hay error al reproducir, aún mostrar la animación
+          startAudioAnimation(3);
+        });
+      }
+    }
+    
+    function startAudioAnimation(duration) {
+      // Si no hay duración válida o es 0, no mostrar animación
+      if (!duration || duration === 0 || isNaN(duration)) {
+        return;
+      }
+      
+      // Animar rejilla del altavoz
+      speakerGrille.classList.add('animate');
+      
+      // Crear notas musicales durante toda la duración del audio
+      const noteIntervalTime = 400; // Una nota cada 400ms
+      let noteCount = 0;
+      const maxNotes = Math.ceil(duration * 1000 / noteIntervalTime);
+      
+      noteInterval = setInterval(() => {
+        if (noteCount >= maxNotes) {
+          clearInterval(noteInterval);
+          return;
+        }
+        
+        createMusicalNote();
+        noteCount++;
+      }, noteIntervalTime);
+    }
+    
+    function stopAudioAnimation() {
+      clearInterval(noteInterval);
+      speakerGrille.classList.remove('animate');
+    }
+    
+    function createMusicalNote() {
+      const notes = ['♪', '♫', '♬', '♩', '♭', '♯'];
+      const gameboy = document.querySelector('.gameboy');
+      const speakerRect = speakerGrille.getBoundingClientRect();
+      const gameboyRect = gameboy.getBoundingClientRect();
+      
+      const note = document.createElement('div');
+      note.className = 'musical-note';
+      note.textContent = notes[Math.floor(Math.random() * notes.length)];
+      
+      // Posicionar la nota en relación al altavoz
+      const relativeX = speakerRect.left - gameboyRect.left + speakerRect.width / 2;
+      const relativeY = speakerRect.top - gameboyRect.top + speakerRect.height / 2;
+      
+      note.style.left = (relativeX + (Math.random() * 20 - 10)) + 'px';
+      note.style.top = relativeY + 'px';
+      
+      gameboy.appendChild(note);
+      
+      // Activar animación
+      requestAnimationFrame(() => {
+        note.classList.add('animate');
+      });
+      
+      // Eliminar después de la animación
+      setTimeout(() => {
+        if (note.parentNode) {
+          note.parentNode.removeChild(note);
+        }
+      }, 1000);
+    }
+
+    function navigateItems(direction) {
+      if (!itemMenuOpen) return;
+      
+      const gridCols = 3;
+      const totalItems = items.length;
+      let newIndex = selectedItemIndex;
+      
+      switch(direction) {
+        case -3: // Arriba
+          newIndex = selectedItemIndex - gridCols;
+          if (newIndex < 0) {
+            // Si estamos en la primera fila, ir a la última fila en la misma columna
+            const col = selectedItemIndex % gridCols;
+            const lastRowStart = Math.floor((totalItems - 1) / gridCols) * gridCols;
+            newIndex = lastRowStart + col;
+            if (newIndex >= totalItems) {
+              newIndex = lastRowStart + col - gridCols;
+            }
+          }
+          break;
+          
+        case 3: // Abajo
+          newIndex = selectedItemIndex + gridCols;
+          if (newIndex >= totalItems) {
+            // Si nos pasamos, ir a la primera fila en la misma columna
+            const col = selectedItemIndex % gridCols;
+            newIndex = col;
+          }
+          break;
+          
+        case -1: // Izquierda
+          newIndex = selectedItemIndex - 1;
+          if (newIndex < 0 || Math.floor(newIndex / gridCols) !== Math.floor(selectedItemIndex / gridCols)) {
+            // Si estamos al inicio de la fila, ir al final de la misma fila
+            const row = Math.floor(selectedItemIndex / gridCols);
+            newIndex = Math.min(row * gridCols + gridCols - 1, totalItems - 1);
+          }
+          break;
+          
+        case 1: // Derecha
+          newIndex = selectedItemIndex + 1;
+          if (newIndex >= totalItems || Math.floor(newIndex / gridCols) !== Math.floor(selectedItemIndex / gridCols)) {
+            // Si estamos al final de la fila, ir al inicio de la misma fila
+            const row = Math.floor(selectedItemIndex / gridCols);
+            newIndex = row * gridCols;
+          }
+          break;
+      }
+      
+      // Asegurar que el índice esté dentro del rango válido
+      if (newIndex >= 0 && newIndex < totalItems) {
+        selectedItemIndex = newIndex;
+        updateItemSelection();
+      }
+    }
+    
+    // Event listeners
+    document.getElementById('btnA').onclick = () => {
+      if (!gameStarted && !gameEnded) {
+        startGame();
+      }
+    };
+    
+    document.getElementById('btnAudio').onclick = () => {
+      if (!gameStarted && !gameEnded) {
+        // Audio de introducción
+        play('audio/intro.wav');
+      } else if (gameStarted && !gameEnded && currentQuestion < questions.length) {
+        play(questions[currentQuestion].a);
+      }
+    };
+    
+    document.getElementById('centerBtn').onclick = () => {
+      if (!gameStarted || gameEnded) return;
+      
+      if (itemMenuOpen) {
+        closeItemMenu();
+      } else if (currentQuestion >= 4) {
+        showItemMenu();
+      }
+    };
+
+    document.getElementById('btnB').onclick = () => {
+      if (itemMenuOpen) {
+        useItem();
+      }
+    };
+
+    document.querySelector('.up').onclick = () => {
+      if (!itemMenuOpen) return;
+      navigateItems(-3); // Una fila arriba
+    };
+
+    document.querySelector('.down').onclick = () => {
+      if (!itemMenuOpen) return;
+      navigateItems(3); // Una fila abajo
+    };
+
+    document.querySelector('.left').onclick = () => {
+      if (!itemMenuOpen) return;
+      navigateItems(-1); // Izquierda
+    };
+
+    document.querySelector('.right').onclick = () => {
+      if (!itemMenuOpen) return;
+      navigateItems(1); // Derecha
+    };
+    
+    // Initialize game
+    updateLives();
+    updateBossBar();
+  </script>
+</body>
+</html>
