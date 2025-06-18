@@ -98,17 +98,17 @@
   <script>
     // Sistema de objetos
     const items = [
-      {id: 'sable', name: 'Sable de El Sable', icon: '⚔️', owned: false, used: false},
+      {id: 'sable', name: 'Sable de El Sable', icon: '⚔️', owned: true, used: false},
       {id: 'bracito', name: 'Bracito esquelético', icon: '🦴', owned: true, used: false},
-      {id: 'espada', name: 'Espada condón', icon: '🗡️', owned: false, used: false},
+      {id: 'espada', name: 'Espada condón', icon: '🗡️', owned: true, used: false},
       {id: 'escudo', name: 'Escudo capitán américa', icon: '🛡️', owned: true, used: false},
       {id: 'anticonceptivo', name: 'Escudo anticonceptivo', icon: '🔰', owned: true, used: false},
-      {id: 'donuts', name: 'Donuts', icon: '🍩', owned: false, used: false},
+      {id: 'donuts', name: 'Donuts', icon: '🍩', owned: true, used: false},
       {id: 'migas', name: 'Migas del abuelo', icon: '🍞', owned: true, used: false},
-      {id: 'cola', name: 'Ñoca-cola', icon: '🥤', owned: false, used: false},
-      {id: 'pastilla', name: 'Pastilla abortiva', icon: '💊', owned: false, used: false},
-      {id: 'champu', name: 'Champú anti caspa', icon: '🧴', owned: false, used: false},
-      {id: 'bang', name: 'Carta de bang', icon: '🃏', owned: false, used: false},
+      {id: 'cola', name: 'Ñoca-cola', icon: '🥤', owned: true, used: false},
+      {id: 'pastilla', name: 'Pastilla abortiva', icon: '💊', owned: true, used: false},
+      {id: 'champu', name: 'Champú anti caspa', icon: '🧴', owned: true, used: false},
+      {id: 'bang', name: 'Carta de bang', icon: '🃏', owned: true, used: false},
       {id: 'piedra', name: 'Una piedra', icon: '🪨', owned: true, used: false}
     ];
 
@@ -119,6 +119,9 @@
     let maxLives = 4;
     let itemUsedThisQuestion = false;
     let champuUsed = false;
+    let backgroundMusic = null;
+    let originalBgVolume = 0.12; // Volumen normal de la música de fondo
+    let lowBgVolume = 0.01; // Volumen bajo cuando suenan efectos
 
     // Preguntas y respuestas
     const questions = [
@@ -452,6 +455,10 @@
       
       updateLives();
       updateBossBar();
+
+      // Iniciar música de fondo
+      startBackgroundMusic();
+
       showQuestion();
     }
     
@@ -608,6 +615,10 @@
     function endGame() {
       gameEnded = true;
       stopTimer();
+      
+      // Detener música de fondo
+      stopBackgroundMusic();
+      
       quizEl.style.display = 'none';
       timerEl.textContent = '';
       
@@ -619,23 +630,29 @@
       
       let message = '';
       let isWin = false;
+      let audioSrc = '';
       
       if (correctAnswers >= 11) {
         message = '¡Victoria! Has superado a La Innombrable.';
         info.textContent = 'PANTALLA FINAL';
         isWin = true;
-        play('audio/final_success.wav');
+        audioSrc = 'audio/victory.wav'; // Audio de victoria
       } else if (lives <= 0) {
         message = 'Sin vidas... No has logrado superar a La Innombrable.';
         info.textContent = 'GAME OVER';
-        play('audio/final_fail.wav');
+        audioSrc = 'audio/defeat.wav'; // Audio de derrota
       } else {
         message = 'Se acabaron las preguntas... No has logrado superar a La Innombrable.';
         info.textContent = 'GAME OVER';
-        play('audio/final_fail.wav');
+        audioSrc = 'audio/defeat.wav'; // Audio de derrota
       }
       
       result.innerHTML = `<p class="${isWin ? 'win' : 'lose'}">${message}</p>`;
+      
+      // Reproducir audio de final con un pequeño delay
+      setTimeout(() => {
+        play(audioSrc);
+      }, 500);
     }
     
     function play(src) {
@@ -650,6 +667,9 @@
       speakerGrille.classList.remove('animate');
       
       if (src) {
+        // Bajar volumen de música de fondo
+        fadeBackgroundMusic(lowBgVolume, 300);
+        
         currentAudio = new Audio(src);
         
         // Manejar eventos del audio
@@ -660,16 +680,21 @@
         
         currentAudio.addEventListener('ended', () => {
           stopAudioAnimation();
+          // Restaurar volumen de música de fondo
+          fadeBackgroundMusic(originalBgVolume, 300);
         });
         
         currentAudio.addEventListener('error', () => {
-          // En caso de error, no mostrar animación
+          // En caso de error, restaurar música de fondo y no mostrar animación
           stopAudioAnimation();
+          fadeBackgroundMusic(originalBgVolume, 300);
         }); 
 
         currentAudio.play().catch(() => {
           // Si hay error al reproducir, aún mostrar la animación
           startAudioAnimation(3);
+          // Restaurar música de fondo después de un tiempo
+          setTimeout(() => fadeBackgroundMusic(originalBgVolume, 300), 3000);
         });
       }
     }
@@ -734,6 +759,51 @@
           note.parentNode.removeChild(note);
         }
       }, 1000);
+    }
+
+    function startBackgroundMusic() {
+      if (backgroundMusic) {
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+      }
+      
+      backgroundMusic = new Audio('audio/background.wav'); // Cambia por tu archivo
+      backgroundMusic.loop = true;
+      backgroundMusic.volume = originalBgVolume;
+      
+      backgroundMusic.play().catch(() => {
+        // Si hay error al reproducir, intentar más tarde
+        console.log('No se pudo reproducir la música de fondo automáticamente');
+      });
+    }
+
+    function stopBackgroundMusic() {
+      if (backgroundMusic) {
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+        backgroundMusic = null;
+      }
+    }
+
+    function fadeBackgroundMusic(toVolume, duration = 500) {
+      if (!backgroundMusic) return;
+      
+      const startVolume = backgroundMusic.volume;
+      const volumeChange = toVolume - startVolume;
+      const steps = 20;
+      const stepTime = duration / steps;
+      const stepVolume = volumeChange / steps;
+      
+      let currentStep = 0;
+      const fadeInterval = setInterval(() => {
+        currentStep++;
+        backgroundMusic.volume = Math.max(0, Math.min(1, startVolume + (stepVolume * currentStep)));
+        
+        if (currentStep >= steps) {
+          clearInterval(fadeInterval);
+          backgroundMusic.volume = toVolume;
+        }
+      }, stepTime);
     }
 
     function navigateItems(direction) {
@@ -861,6 +931,24 @@
         showNotification('🔊 Sube el volumen para la mejor experiencia', '#4caf50');
       }, 1000);
     });
+
+    // Iniciar música de fondo cuando el usuario interactúe por primera vez
+    let musicStarted = false;
+    function tryStartMusic() {
+      if (!musicStarted && !gameStarted) {
+        musicStarted = true;
+        backgroundMusic = new Audio('audio/background.wav'); // Cambia por tu archivo
+        backgroundMusic.loop = true;
+        backgroundMusic.volume = originalBgVolume;
+        backgroundMusic.play().catch(() => {
+          musicStarted = false;
+        });
+      }
+    }
+
+    // Añadir listeners para iniciar música con cualquier interacción
+    document.addEventListener('click', tryStartMusic, { once: true });
+    document.addEventListener('keydown', tryStartMusic, { once: true });
   </script>
 </body>
 </html>
