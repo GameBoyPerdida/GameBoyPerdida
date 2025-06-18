@@ -847,6 +847,20 @@
     // Initialize game
     updateLives();
     updateBossBar();
+
+    // Mostrar alerta simple al cargar la página
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        alert('🎮 La GameBoy Perdida\n\n🔊 Sube el volumen para mejorar la experiencia');
+      }, 500);
+    });
+
+    // Mostrar notificación personalizada al cargar
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        showNotification('🔊 Sube el volumen para la mejor experiencia', '#4caf50');
+      }, 1000);
+    });
   </script>
 </body>
 </html>
