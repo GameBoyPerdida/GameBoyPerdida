@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Gameboy Quiz con Objetos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body,html{height:100%}
@@ -18,7 +19,7 @@
     .boss-bar{height:100%;background:linear-gradient(90deg,#ff4444,#cc0000);transition:width 0.5s;border-radius:2px}
     .boss-label{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:12px;color:#0f380f;font-weight:bold}
     #intro,#result{margin:4px 0;text-align:center;font-size:12px}
-    .placeholder-level{width:80%;max-width:200px;height:100px;background:#0f380f;margin:16px 0;border:2px solid #4a7c59;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#9bbc0f;gap:8px}
+    .placeholder-level{width:80%;max-width:250px;height:100px;background:#0f380f;margin:16px 0;border:2px solid #4a7c59;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#9bbc0f;gap:8px}
     .placeholder-level.blink{animation:blink 1s infinite}
     @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0.3}}
     .quiz{display:none;flex-direction:column;gap:6px;align-items:center;overflow:auto;padding:4px;width:100%}
@@ -34,8 +35,8 @@
     .d-pad button{background:linear-gradient(145deg,#6b7355,#7a8463);border:none;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:12px;color:#333;cursor:pointer;transition:transform .1s}
     .d-pad .up{grid-area:1/2}.left{grid-area:2/1}.center{grid-area:2/2;border-radius:50%}.right{grid-area:2/3}.down{grid-area:3/2}
     button.action{border:none;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.3);color:#fff;transition:transform .1s}
-    .btn-a{background:linear-gradient(145deg,#8b4513,#a0522d);width:45px;height:45px;border-radius:50%;position:absolute;right:0;top:0}
-    .btn-b{background:linear-gradient(145deg,#4a4a4a,#5a5a5a);width:45px;height:45px;border-radius:50%;position:absolute;right:60px;top:20px}
+    .btn-a{background:linear-gradient(145deg,#6b350f,#a0522d);width:45px;height:45px;border-radius:50%;position:absolute;right:0;top:0}
+    .btn-b{background:linear-gradient(145deg,#2b2b2b,#5a5a5a);width:45px;height:45px;border-radius:50%;position:absolute;right:60px;top:20px}
     .btn-audio{background:linear-gradient(145deg,#ff6b6b,#ff5252);width:50px;height:30px;border-radius:8px;font-size:16px;position:absolute;top:50%;display:flex;align-items:center;justify-content:center;transition: transform 0.1s ease;box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);}
     .actions{position:relative;width:120px;height:120px}
     .middle-section{position:absolute;left:50%;top:50%;transform:translate(-50%, -50%);display:flex;flex-direction:column;align-items:center;gap:10px}
@@ -56,6 +57,21 @@
     .item-btn .icon{font-size:16px}
     .active-item{position:absolute;top:40px;left:50%;transform:translateX(-50%);font-size:16px;background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:4px;display:none}
     .quiz button.disabled{opacity:0.4;background:rgba(139,69,19,0.3);pointer-events:none}
+    .btn-help{background:linear-gradient(145deg,#014f5b,#006473);width:35px;height:17.5px;border-radius:8px;font-size:10px;position:relative;top:-20px;display:flex;align-items:center;justify-content:center;transition:transform 0.1s ease;box-shadow:0 2px 5px rgba(0,0,0,0.3);}    .help-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(15,56,15,0.95);color:#9bbc0f;display:none;flex-direction:column;padding:12px;font-size:11px;overflow-y:auto;z-index:1000}
+    .help-title{text-align:center;font-size:14px;font-weight:bold;margin-bottom:12px;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.5)}
+    .help-section{margin-bottom:10px;border-bottom:1px solid rgba(155,188,15,0.3);padding-bottom:8px}
+    .help-section:last-child{border-bottom:none}
+    .help-section h3{color:#fff;font-size:12px;margin-bottom:6px;text-decoration:underline}
+    .control-item{display:flex;justify-content:space-between;align-items:center;margin:3px 0;padding:2px 4px;background:rgba(155,188,15,0.1);border-radius:3px}
+    .control-button{background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;font-weight:bold;color:#fff;font-size:10px}
+    .help-footer{text-align:center;margin-top:8px;font-size:10px;color:#ccc;animation:blink 2s infinite}
+    .help-note{font-size:10px;color:#ccc;margin-top:6px;font-style:italic}
+    .gameboy-title{font-family:'Press Start 2P',monospace;font-size:32px;font-weight:normal;text-align:center;margin-bottom:20px;text-shadow:2px 2px 0px #008800;letter-spacing:3px;animation:titleBlink 2s ease-in-out infinite;}
+    .placeholder-level{animation:menuBlink 1.5s ease-in-out infinite;}
+    .main-message{font-size:13px;margin-bottom:10px;text-align:center;}
+    .help-message{font-size:9px;color:#888;opacity:0.8;text-align:center;}
+    @keyframes menuBlink{0%,100%{opacity:1;}50%{opacity:0.7;}}
+    @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0.3}}
     @keyframes speaker-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1);background:linear-gradient(145deg,#7a8463,#8b956d)}}
     @keyframes note-float{0%{opacity:1;transform:translateY(0) scale(0.5)}50%{opacity:0.8;transform:translateY(-20px) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(0.5)}}
     @media(max-width:350px){.d-pad{width:70px;height:70px}.btn-a,.btn-b{width:40px;height:40px}.speaker-grille{width:40px;height:28px}}
@@ -73,13 +89,76 @@
       <div class="boss-bar-container" style="display:none;">
         <div class="boss-bar" id="bossBar"></div>
       </div>
-      <div id="intro"></div>
+      <div id="intro">
+        <div class="gameboy-title">GameBoy Perdida</div>
+      </div>
       <div class="placeholder-level" id="placeholder">
-        <div>🎵 Pulsa ♪ para escuchar</div>
-        <div class="blink">Pulsa A para empezar</div>
+        <div class="main-message">🎵 Pulsa ♪ para escuchar el mensaje...</div>
+        <div class="help-message">💡 Pulsa HELP para ver los controles</div>
       </div>
       <div id="quiz" class="quiz"></div>
       <div id="result"></div>
+
+      <div class="help-screen" id="helpScreen">
+        <div class="help-title">📋 GUÍA DE CONTROLES</div>
+        
+        <div class="help-section">
+          <h3>🎮 Navegación General</h3>
+          <div class="control-item">
+            <span>Iniciar juego</span>
+            <span class="control-button">A</span>
+          </div>
+          <div class="control-item">
+            <span>Mostrar/Ocultar esta ayuda</span>
+            <span class="control-button">HELP</span>
+          </div>
+          <div class="control-item">
+            <span>Escuchar intro/pregunta</span>
+            <span class="control-button">♪</span>
+          </div>
+        </div>
+        
+        <div class="help-section">
+          <h3>❓ Durante Preguntas</h3>
+          <div class="control-item">
+            <span>Navegar respuestas</span>
+            <span class="control-button">↑ ↓</span>
+          </div>
+          <div class="control-item">
+            <span>Seleccionar respuesta</span>
+            <span class="control-button">A</span>
+          </div>
+          <div class="control-item">
+            <span>Abrir/Cerrar menú objetos</span>
+            <span class="control-button">●</span>
+          </div>
+        </div>
+        
+        <div class="help-section">
+          <h3>🎒 Menú de Objetos</h3>
+          <div class="control-item">
+            <span>Navegar objetos</span>
+            <span class="control-button">↑ ↓ ← →</span>
+          </div>
+          <div class="control-item">
+            <span>Usar objeto seleccionado</span>
+            <span class="control-button">B</span>
+          </div>
+          <div class="control-item">
+            <span>Cerrar menú</span>
+            <span class="control-button">●</span>
+          </div>
+          <div class="help-note">
+            * Los objetos se pueden usar a partir del 5º nivel<br>
+            * Los objetos son de un solo uso<br>
+            * Solo se puede usar un objeto por nivel
+          </div>
+        </div>
+        
+        <div class="help-footer">
+          Presiona HELP para cerrar
+        </div>
+      </div>
     </div>
     <div class="controls">
       <div class="d-pad">
@@ -87,6 +166,7 @@
       </div>
       <div class="middle-section">
         <button class="action btn-audio" id="btnAudio">♪</button>
+        <button class="action btn-help" onclick="toggleHelp()">HELP</button>
       </div>
       <div class="actions">
         <button class="action btn-b" id="btnB">B</button>
@@ -122,6 +202,8 @@
     let backgroundMusic = null;
     let originalBgVolume = 0.12; // Volumen normal de la música de fondo
     let lowBgVolume = 0.01; // Volumen bajo cuando suenan efectos
+    let selectedAnswerIndex = -1; // -1 significa que no hay selección activa
+    let answersNavigationActive = false;
 
     // Preguntas y respuestas
     const questions = [
@@ -152,6 +234,7 @@
     let currentAudio = null;
     let noteInterval = null;
     let beardActive = true; // Cambiado a true por defecto
+    let helpMenuOpen = false;
     
     const intro = document.getElementById('intro');
     const quizEl = document.getElementById('quiz');
@@ -201,22 +284,22 @@
     function showNotification(message, color = '#0f380f') {
       const notification = document.createElement('div');
       notification.style.cssText = `
-        position: absolute;
-        bottom: 80px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 16px;
-        background: ${color === '#4caf50' ? '#0f380f' : (color === '#ff9800' || color === '#ff4444') ? 'rgba(139,0,0,0.9)' : 'rgba(155,188,15,0.9)'};
-        border: 3px solid ${color === '#4caf50' ? '#9bbc0f' : color};
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: bold;
-        color: ${color === '#4caf50' ? '#9bbc0f' : (color === '#ff9800' || color === '#ff4444') ? '#ffcccc' : color};
-        z-index: 1000;
-        animation: fadeInOut 3s ease-in-out forwards;
-        max-width: 80%;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 16px;
+      background: ${color === '#4caf50' ? '#0f380f' : (color === '#ff9800' || color === '#ff4444') ? 'rgba(139,0,0,0.9)' : 'rgba(155,188,15,0.9)'};
+      border: 3px solid ${color === '#4caf50' ? '#9bbc0f' : color};
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      color: ${color === '#4caf50' ? '#9bbc0f' : (color === '#ff9800' || color === '#ff4444') ? '#ffcccc' : color};
+      z-index: 1000;
+      animation: fadeInOut 3s ease-in-out forwards;
+      width: 250px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       `;
       notification.textContent = message;
       
@@ -246,7 +329,7 @@
     }
 
     function showItemMenu() {
-      if (currentQuestion < 4 || itemUsedThisQuestion) return;
+      if (currentQuestion < 4 || itemUsedThisQuestion || helpMenuOpen) return;
       itemMenuOpen = true;
       selectedItemIndex = 0;
       
@@ -362,39 +445,25 @@
           updateBeardIcon();
           break;
           
-        case 'migas':
-          if (lives < maxLives) {
-            lives++;
-            showNotification('¡Corazón restaurado!', '#4caf50');
-          } else {
-            maxLives++;
-            lives++;
-            showNotification('¡Corazón extra obtenido!', '#4caf50');
-          }
-          updateLives();
-          break;
-          
         case 'piedra':
-          correctAnswers++;
-          updateBossBar();
-          showNotification('¡Daño directo a La Innombrable!', '#ff4444');
-          // Reiniciar el timer
+          // Solo reiniciar el timer, no hacer daño
           const wasBeardActive = beardActive;
           stopTimer();
           beardActive = wasBeardActive;
           startTimer();
+          showNotification('¡Tiempo reiniciado!', '#4caf50');
           break;
           
-          case 'pastilla':
-            if (Math.random() < 0.4) { // Cambiar de 0.2 a 0.4
-              correctAnswers++;
-              updateBossBar();
-              showNotification('¡Pregunta abortada con éxito!', '#4caf50');
-              setTimeout(() => nextQuestion(), 1000);
-            } else {
-              showNotification('La pastilla no tuvo efecto...', '#ff4444');
-            }
-            break;
+        case 'pastilla':
+          if (Math.random() < 0.4) { // Cambiar de 0.2 a 0.4
+            correctAnswers++;
+            updateBossBar();
+            showNotification('¡Pregunta abortada con éxito!', '#4caf50');
+            setTimeout(() => nextQuestion(), 1000);
+          } else {
+            showNotification('La pastilla no tuvo efecto...', '#ff4444');
+          }
+          break;
           
         case 'bang':
           const allButtons = quizEl.querySelectorAll('button');
@@ -404,6 +473,13 @@
               btn.style.display = 'none';
             }
           });
+          break;
+
+        case 'bracito':
+          // El bracito hace daño directo inmediatamente
+           correctAnswers++;
+          updateBossBar();
+          showNotification('¡El bracito hace daño directo!', '#4caf50');
           break;
       }
     }
@@ -438,7 +514,7 @@
     }
     
     function startGame() {
-      if (gameStarted || gameEnded) return;
+      if (gameStarted || gameEnded || helpMenuOpen) return;
       gameStarted = true;
       currentQuestion = 0;
       lives = 4;
@@ -470,6 +546,8 @@
       
       // Reset para nueva pregunta
       itemUsedThisQuestion = false;
+      selectedAnswerIndex = -1;
+      answersNavigationActive = false;
       
       info.textContent = `NIVEL ${currentQuestion + 1}`;
       updateBeardIcon();
@@ -486,6 +564,7 @@
         const btn = document.createElement('button');
         btn.textContent = opt;
         btn.onclick = () => answerQuestion(i);
+        btn.id = `answer-${i}`;
         quizEl.appendChild(btn);
       });
       
@@ -503,20 +582,18 @@
       buttons.forEach(btn => btn.disabled = true);
       
       if (selectedIndex === question.c) {
+        // RESPUESTA CORRECTA
         correctAnswers++;
         buttons[selectedIndex].style.background = '#4caf50';
+        
+        // Reproducir sonido de acierto
+        setTimeout(() => {
+          play('audio/correct.wav');
+        }, 200);
         
         // Efectos de objetos al acertar
         if (activeItem) {
           switch(activeItem.id) {
-            case 'bracito':
-              if (Math.random() < 0.6) {
-                correctAnswers++;
-                showNotification('¡El bracito te da suerte extra!', '#4caf50');
-              } else {
-                showNotification('El bracito no tuvo efecto...', '#ff9800');
-              }
-              break;
             case 'cola':
               correctAnswers++;
               showNotification('¡Ñoca-cola potencia tu acierto!', '#4caf50');
@@ -532,6 +609,18 @@
                 showNotification('El escudo del Capitán América no se activó...', '#ff4444');
               }
               break;
+            case 'migas':
+              // Las migas solo funcionan al acertar
+              if (lives < maxLives) {
+                lives++;
+                showNotification('¡Corazón restaurado por las migas!', '#4caf50');
+              } else {
+                maxLives++;
+                lives++;
+                showNotification('¡Corazón extra por las migas!', '#4caf50');
+              }
+              updateLives();
+              break;
           }
         }
         
@@ -541,9 +630,15 @@
           return;
         }
       } else {
+        // RESPUESTA INCORRECTA
         let damage = currentQuestion >= 10 ? 2 : 1;
         let applyDamage = true;
         let originalDamage = damage;
+        
+        // Reproducir sonido de fallo
+        setTimeout(() => {
+          play('audio/wrong.wav');
+        }, 200);
         
         // Efectos de objetos al fallar
         if (activeItem) {
@@ -559,7 +654,7 @@
               break;
             case 'escudo':
               showNotification('El escudo del Capitán América no se activó...', '#ff4444');
-             break;
+            break;
             case 'cola':
               damage *= 2;
               showNotification('¡Ñoca-cola duplica el daño recibido!', '#ff4444');
@@ -861,24 +956,80 @@
         updateItemSelection();
       }
     }
+
+    function updateAnswerSelection() {
+      const buttons = quizEl.querySelectorAll('button');
+      buttons.forEach((btn, i) => {
+        if (i === selectedAnswerIndex) {
+          btn.style.border = '2px solid #fff';
+          btn.style.boxShadow = '0 0 8px rgba(255,255,255,0.6)';
+        } else {
+          btn.style.border = '1px solid #0f380f';
+          btn.style.boxShadow = 'none';
+        }
+      });
+    }
+
+    function navigateAnswers(direction) {
+      if (!gameStarted || gameEnded || itemMenuOpen || helpMenuOpen) return;
+      
+      const buttons = quizEl.querySelectorAll('button');
+      if (buttons.length === 0) return;
+      
+      // Activar navegación si no está activa
+      if (!answersNavigationActive) {
+        answersNavigationActive = true;
+        selectedAnswerIndex = 0;
+      } else {
+        // Navegar por las respuestas
+        if (direction === -1) { // Arriba
+          selectedAnswerIndex = selectedAnswerIndex > 0 ? selectedAnswerIndex - 1 : buttons.length - 1;
+        } else if (direction === 1) { // Abajo
+          selectedAnswerIndex = selectedAnswerIndex < buttons.length - 1 ? selectedAnswerIndex + 1 : 0;
+        }
+      }
+      
+      updateAnswerSelection();
+    }
+
+    function toggleHelp() {
+      const helpScreen = document.getElementById('helpScreen');
+      if (helpScreen.style.display === 'flex') {
+        helpScreen.style.display = 'none';
+        helpMenuOpen = false;
+      } else {
+        helpScreen.style.display = 'flex';
+        helpMenuOpen = true;
+      }
+    }
     
     // Event listeners
+    // Botón A
     document.getElementById('btnA').onclick = () => {
+      if (helpMenuOpen) return; // Añadir esta línea
+      
       if (!gameStarted && !gameEnded) {
         startGame();
+      } else if (gameStarted && !gameEnded && answersNavigationActive && selectedAnswerIndex >= 0) {
+        answerQuestion(selectedAnswerIndex);
       }
     };
-    
+
+    // Botón Audio
     document.getElementById('btnAudio').onclick = () => {
+      if (helpMenuOpen) return; // Añadir esta línea
+      
       if (!gameStarted && !gameEnded) {
-        // Audio de introducción
         play('audio/intro.wav');
       } else if (gameStarted && !gameEnded && currentQuestion < questions.length) {
         play(questions[currentQuestion].a);
       }
     };
-    
+
+    // Botón Centro (menú objetos)
     document.getElementById('centerBtn').onclick = () => {
+      if (helpMenuOpen) return; // Añadir esta línea
+      
       if (!gameStarted || gameEnded) return;
       
       if (itemMenuOpen) {
@@ -888,30 +1039,51 @@
       }
     };
 
+    // Botón B
     document.getElementById('btnB').onclick = () => {
+      if (helpMenuOpen) return; // Añadir esta línea
+      
       if (itemMenuOpen) {
         useItem();
       }
     };
 
+    // Botón Arriba
     document.querySelector('.up').onclick = () => {
-      if (!itemMenuOpen) return;
-      navigateItems(-3); // Una fila arriba
+      if (helpMenuOpen) return; // Añadir esta línea
+      
+      if (itemMenuOpen) {
+        navigateItems(-3);
+      } else {
+        navigateAnswers(-1);
+      }
     };
 
+    // Botón Abajo
     document.querySelector('.down').onclick = () => {
-      if (!itemMenuOpen) return;
-      navigateItems(3); // Una fila abajo
+      if (helpMenuOpen) return; // Añadir esta línea
+      
+      if (itemMenuOpen) {
+        navigateItems(3);
+      } else {
+        navigateAnswers(1);
+      }
     };
 
+    // Botón Izquierda
     document.querySelector('.left').onclick = () => {
+      if (helpMenuOpen) return; // Añadir esta línea
+      
       if (!itemMenuOpen) return;
-      navigateItems(-1); // Izquierda
+      navigateItems(-1);
     };
 
+    // Botón Derecha
     document.querySelector('.right').onclick = () => {
+      if (helpMenuOpen) return; // Añadir esta línea
+      
       if (!itemMenuOpen) return;
-      navigateItems(1); // Derecha
+      navigateItems(1);
     };
     
     // Initialize game
