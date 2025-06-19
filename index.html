@@ -70,6 +70,16 @@
     .placeholder-level{animation:menuBlink 1.5s ease-in-out infinite;}
     .main-message{font-size:13px;margin-bottom:10px;text-align:center;}
     .help-message{font-size:9px;color:#888;opacity:0.8;text-align:center;}
+    .item-selection-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(15,56,15,0.95);color:#9bbc0f;display:none;flex-direction:column;padding:8px;font-size:10px;overflow-y:auto;z-index:999;}
+    .selection-title{text-align:center;font-size:12px;font-weight:bold;margin-bottom:8px;color:#fff;}
+    .selection-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px;}
+    .selection-item{background:rgba(155,188,15,0.3);border:2px solid #0f380f;border-radius:6px;padding:6px;color:#9bbc0f;font-size:9px;text-align:center;cursor:pointer;min-height:50px;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all 0.2s;}
+    .selection-item.selected{border-color:#fff;background:rgba(155,188,15,0.8);color:#0f380f;}
+    .selection-item .icon{font-size:14px;}
+    .selection-counter{text-align:center;margin:8px 0;font-size:11px;color:#fff;}
+    .selection-buttons{display:flex;justify-content:space-between;gap:8px;margin-top:8px;}
+    .selection-btn{background:rgba(155,188,15,0.8);border:2px solid #0f380f;border-radius:4px;padding:6px 12px;color:#0f380f;font-size:10px;cursor:pointer;flex:1;text-align:center;}
+    .selection-btn:disabled{opacity:0.5;cursor:not-allowed;}
     @keyframes menuBlink{0%,100%{opacity:1;}50%{opacity:0.7;}}
     @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0.3}}
     @keyframes speaker-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1);background:linear-gradient(145deg,#7a8463,#8b956d)}}
@@ -204,6 +214,10 @@
     let lowBgVolume = 0.01; // Volumen bajo cuando suenan efectos
     let selectedAnswerIndex = -1; // -1 significa que no hay selección activa
     let answersNavigationActive = false;
+    let itemSelectionActive = false;
+    let selectedItems = new Set();
+    let maxSelectableItems = 12;
+    let selectionNavigationIndex = 0;
 
     // Preguntas y respuestas
     const questions = [
@@ -346,7 +360,10 @@
         const btn = document.createElement('div');
         btn.className = `item-btn ${(item.used || !item.owned) ? 'used' : ''}`;
         btn.innerHTML = `<div class="icon">${item.icon}</div><div>${item.name}</div>`;
+        btn.id = `item-btn-${i}`;
+        
         if (!item.used && item.owned) {
+          // AGREGAR EVENTO CLICK
           btn.onclick = () => selectItem(i);
           if (firstAvailableIndex === -1) firstAvailableIndex = i;
         }
@@ -356,11 +373,17 @@
       // Seleccionar el primer objeto disponible
       if (firstAvailableIndex !== -1) {
         selectedItemIndex = firstAvailableIndex;
-        updateItemSelection();
       }
       
       menu.appendChild(grid);
       document.getElementById('screen').appendChild(menu);
+      
+      // Aplicar efectos visuales después de que el DOM esté listo
+      setTimeout(() => {
+        if (firstAvailableIndex !== -1) {
+          updateItemSelection();
+        }
+      }, 10);
     }
 
     // 4. Función nueva para actualizar selección de objetos
@@ -368,19 +391,32 @@
       document.querySelectorAll('.item-btn').forEach((btn, i) => {
         const item = items[i];
         if (item) {
-          // Remover todas las clases primero
+          // Remover todas las clases de selección primero
           btn.classList.remove('selected');
+          
+          // Remover estilos de navegación previos
+          btn.style.border = '';
+          btn.style.boxShadow = '';
+          btn.style.transform = '';
+          btn.style.transition = '';
           
           // Solo marcar como seleccionado si es el índice actual
           if (i === selectedItemIndex) {
             btn.classList.add('selected');
+            // AGREGAR ANIMACIÓN SIMILAR A LA PANTALLA DE SELECCIÓN
+            btn.style.border = '3px solid #fff';
+            btn.style.boxShadow = '0 0 12px rgba(255,255,255,0.8)';
+            btn.style.transform = 'scale(1.05)';
+            btn.style.transition = 'all 0.2s ease';
           }
         }
       });
     }
 
     function selectItem(index) {
-      if (items[index].used) return;
+      const item = items[index];
+      if (!item || item.used || !item.owned) return;
+      
       selectedItemIndex = index;
       updateItemSelection();
     }
@@ -515,6 +551,12 @@
     
     function startGame() {
       if (gameStarted || gameEnded || helpMenuOpen) return;
+      
+      // Mostrar pantalla de selección de objetos
+      showItemSelection();
+    }
+
+    function actuallyStartGame() {
       gameStarted = true;
       currentQuestion = 0;
       lives = 4;
@@ -976,16 +1018,29 @@
       const buttons = quizEl.querySelectorAll('button');
       if (buttons.length === 0) return;
       
+      // Obtener botones disponibles (no deshabilitados)
+      const availableIndices = [];
+      buttons.forEach((btn, i) => {
+        if (!btn.disabled && btn.style.display !== 'none' && !btn.classList.contains('disabled')) {
+          availableIndices.push(i);
+        }
+      });
+      
+      if (availableIndices.length === 0) return;
+      
       // Activar navegación si no está activa
       if (!answersNavigationActive) {
         answersNavigationActive = true;
-        selectedAnswerIndex = 0;
+        selectedAnswerIndex = availableIndices[0];
       } else {
-        // Navegar por las respuestas
+        // Navegar solo por las respuestas disponibles
+        const currentPos = availableIndices.indexOf(selectedAnswerIndex);
         if (direction === -1) { // Arriba
-          selectedAnswerIndex = selectedAnswerIndex > 0 ? selectedAnswerIndex - 1 : buttons.length - 1;
+          const newPos = currentPos > 0 ? currentPos - 1 : availableIndices.length - 1;
+          selectedAnswerIndex = availableIndices[newPos];
         } else if (direction === 1) { // Abajo
-          selectedAnswerIndex = selectedAnswerIndex < buttons.length - 1 ? selectedAnswerIndex + 1 : 0;
+          const newPos = currentPos < availableIndices.length - 1 ? currentPos + 1 : 0;
+          selectedAnswerIndex = availableIndices[newPos];
         }
       }
       
@@ -997,21 +1052,269 @@
       if (helpScreen.style.display === 'flex') {
         helpScreen.style.display = 'none';
         helpMenuOpen = false;
+        
+        // CORREGIDO: Solo reanudar si hay tiempo restante y el juego está activo
+        if (gameStarted && !gameEnded && timer > 0) {
+          // Reanudar el timer sin reiniciarlo
+          timerInterval = setInterval(() => {
+            timer--;
+            updateTimer();
+            if (timer <= 0) {
+              clearInterval(timerInterval);
+              nextQuestion();
+            }
+          }, 1000);
+        }
       } else {
         helpScreen.style.display = 'flex';
         helpMenuOpen = true;
+        
+        // Pausar timer si está corriendo
+        if (gameStarted && !gameEnded) {
+          clearInterval(timerInterval);
+        }
+      }
+    }
+
+    function showItemSelection() {
+      itemSelectionActive = true;
+      selectedItems.clear();
+      selectionNavigationIndex = 0;
+      
+      const screen = document.createElement('div');
+      screen.className = 'item-selection-screen';
+      screen.id = 'itemSelectionScreen';
+      screen.style.display = 'flex';
+      
+      screen.innerHTML = `
+        <div class="selection-title">🎒 SELECCIONA TUS OBJETOS</div>
+        <div class="selection-counter" id="selectionCounter">Seleccionados: 0/${items.length}</div>
+        <div class="selection-grid" id="selectionGrid"></div>
+        <div class="selection-buttons">
+          <button class="selection-btn" onclick="selectAllItems()">Todos</button>
+          <button class="selection-btn" onclick="selectRandomItems()">Aleatorio</button>
+          <button class="selection-btn" onclick="clearItemSelection()" style="background: rgba(220,20,60,0.8); border-color: #8B0000;">Limpiar</button>
+          <button class="selection-btn" onclick="confirmItemSelection()" id="confirmBtn">Confirmar</button>
+        </div>
+      `;
+      
+      const grid = screen.querySelector('#selectionGrid');
+      items.forEach((item, i) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'selection-item';
+        itemEl.innerHTML = `<div class="icon">${item.icon}</div><div>${item.name}</div>`;
+        itemEl.id = `selection-item-${i}`;
+        // AGREGAR EVENTO CLICK
+        itemEl.onclick = () => toggleItemSelection(i);
+        grid.appendChild(itemEl);
+      });
+      
+      document.getElementById('screen').appendChild(screen);
+      updateSelectionNavigation();
+      updateSelectionCounter();
+    }
+
+    function toggleItemSelection(index) {
+      // Actualizar el índice de navegación al item clickeado
+      selectionNavigationIndex = index;
+      updateSelectionNavigation();
+      
+      if (selectedItems.has(index)) {
+        selectedItems.delete(index);
+      } else {
+        // Permitir seleccionar hasta todos los objetos
+        selectedItems.add(index);
+      }
+      updateItemSelectionDisplay();
+      updateSelectionCounter();
+    }
+
+    function updateItemSelectionDisplay() {
+      const itemElements = document.querySelectorAll('.selection-item');
+      itemElements.forEach((el, i) => {
+        if (selectedItems.has(i)) {
+          el.classList.add('selected');
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+    }
+
+    function updateSelectionCounter() {
+      const counter = document.getElementById('selectionCounter');
+      const confirmBtn = document.getElementById('confirmBtn');
+      if (counter) {
+        counter.textContent = `Seleccionados: ${selectedItems.size}/${items.length}`;
+      }
+      if (confirmBtn) {
+        // CAMBIAR: Permitir confirmar incluso sin seleccionar nada
+        confirmBtn.disabled = false;
+      }
+    }
+
+    function selectAllItems() {
+      selectedItems.clear();
+      // Seleccionar todos los objetos disponibles
+      for (let i = 0; i < items.length; i++) {
+        selectedItems.add(i);
+      }
+      updateItemSelectionDisplay();
+      updateSelectionCounter();
+    }
+
+    function selectRandomItems() {
+      selectedItems.clear();
+      const availableIndices = [...Array(items.length).keys()];
+      
+      // Seleccionar un número aleatorio de items entre 1 y el total de items
+      const randomCount = Math.floor(Math.random() * items.length) + 1;
+      
+      for (let i = 0; i < randomCount && availableIndices.length > 0; i++) {
+        const randomIndex = Math.floor(Math.random() * availableIndices.length);
+        selectedItems.add(availableIndices[randomIndex]);
+        availableIndices.splice(randomIndex, 1);
+      }
+      
+      updateItemSelectionDisplay();
+      updateSelectionCounter();
+    }
+
+    function confirmItemSelection() {
+      // Actualizar el array de items
+      items.forEach((item, i) => {
+        item.owned = selectedItems.has(i);
+        item.used = false;
+      });
+      
+      // Cerrar pantalla de selección
+      const screen = document.getElementById('itemSelectionScreen');
+      if (screen) screen.remove();
+      itemSelectionActive = false;
+      
+      // Iniciar el juego
+      actuallyStartGame();
+    }
+
+    function clearItemSelection() {
+      selectedItems.clear();
+      updateItemSelectionDisplay();
+      updateSelectionCounter();
+    }
+
+    function updateSelectionNavigation() {
+      const itemElements = document.querySelectorAll('.selection-item');
+      itemElements.forEach((el, i) => {
+        if (i === selectionNavigationIndex) {
+          el.style.border = '3px solid #fff';
+          el.style.boxShadow = '0 0 12px rgba(255,255,255,0.8)';
+          el.style.transform = 'scale(1.05)';
+          el.style.transition = 'all 0.2s ease';
+        } else {
+          el.style.border = '2px solid #0f380f';
+          el.style.boxShadow = 'none';
+          el.style.transform = 'scale(1)';
+        }
+      });
+    }
+
+    function navigateItemSelection(direction) {
+      if (!itemSelectionActive) return;
+      
+      const gridCols = 2; // La grilla es de 2 columnas
+      const totalItems = items.length;
+      let newIndex = selectionNavigationIndex;
+      
+      switch(direction) {
+        case 'up': // Arriba
+          newIndex = selectionNavigationIndex - gridCols;
+          if (newIndex < 0) {
+            // Si estamos en la primera fila, ir a la última fila en la misma columna
+            const col = selectionNavigationIndex % gridCols;
+            const lastRowStart = Math.floor((totalItems - 1) / gridCols) * gridCols;
+            newIndex = lastRowStart + col;
+            if (newIndex >= totalItems) {
+              newIndex = lastRowStart + col - gridCols;
+            }
+          }
+          break;
+          
+        case 'down': // Abajo
+          newIndex = selectionNavigationIndex + gridCols;
+          if (newIndex >= totalItems) {
+            // Si nos pasamos, ir a la primera fila en la misma columna
+            const col = selectionNavigationIndex % gridCols;
+            newIndex = col;
+          }
+          break;
+          
+        case 'left': // Izquierda
+          newIndex = selectionNavigationIndex - 1;
+          if (newIndex < 0 || Math.floor(newIndex / gridCols) !== Math.floor(selectionNavigationIndex / gridCols)) {
+            // Si estamos al inicio de la fila, ir al final de la misma fila
+            const row = Math.floor(selectionNavigationIndex / gridCols);
+            newIndex = Math.min(row * gridCols + gridCols - 1, totalItems - 1);
+          }
+          break;
+          
+        case 'right': // Derecha
+          newIndex = selectionNavigationIndex + 1;
+          if (newIndex >= totalItems || Math.floor(newIndex / gridCols) !== Math.floor(selectionNavigationIndex / gridCols)) {
+            // Si estamos al final de la fila, ir al inicio de la misma fila
+            const row = Math.floor(selectionNavigationIndex / gridCols);
+            newIndex = row * gridCols;
+          }
+          break;
+      }
+      
+      // Asegurar que el índice esté dentro del rango válido
+      if (newIndex >= 0 && newIndex < totalItems) {
+        selectionNavigationIndex = newIndex;
+        updateSelectionNavigation();
+      }
+    }
+
+    function selectCurrentNavigationItem() {
+      if (!itemSelectionActive) return;
+      toggleItemSelection(selectionNavigationIndex);
+    }
+
+    function deselectCurrentNavigationItem() {
+      if (!itemSelectionActive) return;
+      if (selectedItems.has(selectionNavigationIndex)) {
+        selectedItems.delete(selectionNavigationIndex);
+        updateItemSelectionDisplay();
+        updateSelectionCounter();
       }
     }
     
     // Event listeners
     // Botón A
     document.getElementById('btnA').onclick = () => {
-      if (helpMenuOpen) return; // Añadir esta línea
+      if (helpMenuOpen || itemMenuOpen) return;
       
-      if (!gameStarted && !gameEnded) {
+      if (itemSelectionActive) {
+        selectCurrentNavigationItem(); // Seleccionar item actual en pantalla de selección
+      } else if (!gameStarted && !gameEnded) {
         startGame();
       } else if (gameStarted && !gameEnded && answersNavigationActive && selectedAnswerIndex >= 0) {
-        answerQuestion(selectedAnswerIndex);
+        // Verificar que la respuesta seleccionada esté disponible
+        const selectedButton = quizEl.querySelector(`#answer-${selectedAnswerIndex}`);
+        if (selectedButton && !selectedButton.disabled && 
+            selectedButton.style.display !== 'none' && 
+            !selectedButton.classList.contains('disabled')) {
+          answerQuestion(selectedAnswerIndex);
+        }
+      }
+    };
+
+    // Botón B
+    document.getElementById('btnB').onclick = () => {
+      if (helpMenuOpen) return;
+      
+      if (itemSelectionActive) {
+        deselectCurrentNavigationItem(); // Deseleccionar item actual en pantalla de selección
+      } else if (itemMenuOpen) {
+        useItem();
       }
     };
 
@@ -1039,20 +1342,13 @@
       }
     };
 
-    // Botón B
-    document.getElementById('btnB').onclick = () => {
-      if (helpMenuOpen) return; // Añadir esta línea
-      
-      if (itemMenuOpen) {
-        useItem();
-      }
-    };
-
     // Botón Arriba
     document.querySelector('.up').onclick = () => {
-      if (helpMenuOpen) return; // Añadir esta línea
+      if (helpMenuOpen) return;
       
-      if (itemMenuOpen) {
+      if (itemSelectionActive) {
+        navigateItemSelection('up');
+      } else if (itemMenuOpen) {
         navigateItems(-3);
       } else {
         navigateAnswers(-1);
@@ -1061,9 +1357,11 @@
 
     // Botón Abajo
     document.querySelector('.down').onclick = () => {
-      if (helpMenuOpen) return; // Añadir esta línea
+      if (helpMenuOpen) return;
       
-      if (itemMenuOpen) {
+      if (itemSelectionActive) {
+        navigateItemSelection('down');
+      } else if (itemMenuOpen) {
         navigateItems(3);
       } else {
         navigateAnswers(1);
@@ -1072,18 +1370,28 @@
 
     // Botón Izquierda
     document.querySelector('.left').onclick = () => {
-      if (helpMenuOpen) return; // Añadir esta línea
+      if (helpMenuOpen) return;
       
-      if (!itemMenuOpen) return;
-      navigateItems(-1);
+      if (itemSelectionActive) {
+        navigateItemSelection('left');
+      } else if (!itemMenuOpen) {
+        return;
+      } else {
+        navigateItems(-1);
+      }
     };
 
     // Botón Derecha
     document.querySelector('.right').onclick = () => {
-      if (helpMenuOpen) return; // Añadir esta línea
+      if (helpMenuOpen) return;
       
-      if (!itemMenuOpen) return;
-      navigateItems(1);
+      if (itemSelectionActive) {
+        navigateItemSelection('right');
+      } else if (!itemMenuOpen) {
+        return;
+      } else {
+        navigateItems(1);
+      }
     };
     
     // Initialize game
@@ -1097,30 +1405,33 @@
       }, 500);
     });
 
-    // Mostrar notificación personalizada al cargar
+    // Mostrar notificación personalizada al cargar e iniciar musica de fondo
     window.addEventListener('load', () => {
       setTimeout(() => {
         showNotification('🔊 Sube el volumen para la mejor experiencia', '#4caf50');
       }, 1000);
+
+      setTimeout(() => {
+        if (!backgroundMusic) {
+          backgroundMusic = new Audio('audio/background.wav');
+          backgroundMusic.loop = true;
+          backgroundMusic.volume = originalBgVolume;
+          
+          // Intentar reproducir automáticamente
+          backgroundMusic.play().catch(() => {
+            console.log('Reproducción automática bloqueada por el navegador');
+            // Fallback: reproducir con la primera interacción del usuario
+            const startMusicOnInteraction = () => {
+              backgroundMusic.play().catch(() => {});
+              document.removeEventListener('click', startMusicOnInteraction);
+              document.removeEventListener('keydown', startMusicOnInteraction);
+            };
+            document.addEventListener('click', startMusicOnInteraction, { once: true });
+            document.addEventListener('keydown', startMusicOnInteraction, { once: true });
+          });
+        }
+      }, 500);
     });
-
-    // Iniciar música de fondo cuando el usuario interactúe por primera vez
-    let musicStarted = false;
-    function tryStartMusic() {
-      if (!musicStarted && !gameStarted) {
-        musicStarted = true;
-        backgroundMusic = new Audio('audio/background.wav'); // Cambia por tu archivo
-        backgroundMusic.loop = true;
-        backgroundMusic.volume = originalBgVolume;
-        backgroundMusic.play().catch(() => {
-          musicStarted = false;
-        });
-      }
-    }
-
-    // Añadir listeners para iniciar música con cualquier interacción
-    document.addEventListener('click', tryStartMusic, { once: true });
-    document.addEventListener('keydown', tryStartMusic, { once: true });
   </script>
 </body>
 </html>
